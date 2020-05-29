@@ -4,9 +4,10 @@
     <title>three.js - pointerlock controls</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-    <link rel="stylesheet" href="../css/index.css" />
+    <link rel="stylesheet" href="../css/index.css"/>
 
     <script src="Museum.js"></script>
+    <script src="Utils.js"></script>
 
     <script src="../js/three.js"></script>
     <script src="../js/promiseLoader.js"></script>
@@ -19,7 +20,7 @@
 
     <script type="text/javascript">
         $(document).ready(
-            function() {
+            function () {
                 var canvas = document.getElementById("webglcanvas");
                 // create the scene
                 createScene(canvas);
@@ -31,19 +32,20 @@
 </head>
 
 <body>
+<section id="loading-screen">
+
+    <div id="loader"></div>
+
+</section>
 
 <div id="blocker">
-
     <div id="instructions">
         <span style="font-size:40px">Click to start</span>
-        <br />
+        <br/>
         (W, A, S, D = Move, MOUSE = Look around)
     </div>
 </div>
-
-<div id="container">
-    <canvas id="webglcanvas"></canvas>
-</div>
+<canvas id="webglcanvas"></canvas>
 
 </body>
 </html>

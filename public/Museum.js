@@ -1,114 +1,57 @@
-let camera, scene, renderer, controls, stats;
-
+//Variables for objects and scene
+let camera, webgl_scene, renderer, controls, stats;
 let objects = [];
+let tanksArr = [];
+let root;
 let blocker, instructions;
 let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
 let prevTime = performance.now();
 let velocity, direction;
 let wall_colider = [];
-let wall_material;
+let wall_material, info_material;
 
 //Variables for video
 let videoObj = [];
-let video = {
-    position: {x: 163, y: 100, z: -150},
-    rotation: {x: 0, y: -300 - 0.02, z: 0},
-    url: "../img/history_of_tanks.mp4",
-    id: "video-1"
-};
-let video2 = {
-    position: {x: 985, y: 100, z: -150},
-    rotation: {x: 0, y: 300 - 0.02, z: 0},
-    url: "../img/inside_of_tanks.mp4",
-    id: "video-2"
-};
-
-//Variables for text
-let text_1 = {
-    message: 'P : play/resume | SPACE : pause | R : rewind',
-    position: {x: 163, y: 10, z: -30},
-    rotation: {x: 0, y: -300, z: 0},
-    propertiesFont: {size: 7, height: 1},
-};
-let text_2 = {
-    message: 'History of tanks',
-    position: {x: 163, y: 190, z: -60},
-    rotation: {x: 0, y: -300, z: 0},
-    propertiesFont: {size: 15, height: 1},
-};
 
 //Variables for museum walls, roof and floor
 let floorUrl = "../img/cuadrosPiso.jpg";
 let wallUrl = "../img/wall.jpg";
 let roofUrl = "../img/roof4.png";
 
-let objects_tanks = [
-    t_34_85 = {
-        obj: "../models/T-34-85/T-34.obj",
-        map: "../models/T-34-85/tex/texture.jpg",
-        normalMap: "../models/T-34-85/tex/normal.jpg",
-        // specularMap: "../models/Ft_Renault/thread_spec.jpg",
-        scale: 0.05,
-        position: {x: 0, y: 10, z: -50}
-    },
-    mc_1 = {
-        obj: "../models/MC1/MC1.obj",
-        map: "../models/MC1/MC-1_Base_2k.bmp",
-        map2: "../models/MC1/MC-1_Tracks_2k.bmp",
-        scale: 12,
-        position: {x: 0, y: 10, z: -100}
-    },
-    btr_80a = {
-        obj: "../models/BTR80A/BTR80A.FBX",
-        map: "../models/BTR80A/mapTexture.png",
-        normalMap: "../models/BTR80A/normal.png",
-        specularMap: "../models/BTR80A/spec.png",
-        scale: 0.05,
-        position: {x: 0, y: 10, z: -150}
-    },
-    t_34 = {
-        obj: "../models/T-34/tank.FBX",
-        map: "../models/T-34/diffuse.jpg",
-        normalMap: "../models/T-34/Normal.jpg",
-        specularMap: "../models/T-34/Specular.jpg",
-        scale: 0.001,
-        position: {x: 0, y: 10, z: -200}
-    },
-    panzer = {
-        obj: "../models/Panzer/panzer-tank.fbx",
-        map: "default",
-        normalMap: "default",
-        specularMap: "default",
-        scale: 1,
-        position: {x: 0, y: 10, z: -250}
-    }
-];
+let size_info = {w: 20, h: 14, d: 0.5};
 
 let SHADOW_MAP_WIDTH = 2048,
     SHADOW_MAP_HEIGHT = 2048;
+
+let loadingManager;
+
 /*-------------------------------------------------------------------------------------------------------------------*/
 
-//Create scene
+//Create webgl_scene
 function createScene(canvas) {
     //Create the variables for velocity and direction
     velocity = new THREE.Vector3();
     direction = new THREE.Vector3();
 
-    //Create the render and put the scene
-    renderer = new THREE.WebGLRenderer({canvas: canvas, antialias: true});
+    renderer = new THREE.WebGLRenderer({canvas: canvas, alpha: true, antialias: true});
+    renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
-    // Options are THREE.BasicShadowMap, THREE.PCFShadowMap, PCFSoftShadowMap
-    renderer.shadowMap.type = THREE.PCFShadowMap;
-    window.addEventListener('resize', onWindowResize, false);
-    window.addEventListener('resize', onWindowResize, false);
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 4000);
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x000000);
-    scene.fog = new THREE.Fog(0x5c5757, 0, 1000);
 
-    // A light source positioned directly above the scene, with color fading from the sky color to the ground color.
+    // Options are THREE.BasicShadowMap, THREE.PCFShadowMap, PCFSoftShadowMap
+    renderer.shadowMap.type = THREE.BasicShadowMap;
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 750);
+    webgl_scene = new THREE.Scene();
+    webgl_scene.background = new THREE.Color(0x000000);
+    webgl_scene.fog = new THREE.Fog(0x000000, 1, 800);
+
+    loadingM();
+
+    root = new THREE.Object3D();
+
+
+    // A light source positioned directly above the webgl_scene, with color fading from the sky color to the ground color.
     // HemisphereLight( skyColor, groundColor, intensity )
     // skyColor - (optional) hexadecimal color of the sky. Default is 0xffffff.
     // groundColor - (optional) hexadecimal color of the ground. Default is 0xffffff.
@@ -123,17 +66,17 @@ function createScene(canvas) {
     spotLight.shadow.camera.fov = 45;
     spotLight.shadow.mapSize.width = SHADOW_MAP_WIDTH;
     spotLight.shadow.mapSize.height = SHADOW_MAP_HEIGHT;
-    let spotLightHelper = new THREE.SpotLightHelper(spotLight);
-    scene.add(spotLightHelper);
+    // let spotLightHelper = new THREE.SpotLightHelper(spotLight);
+    // webgl_scene.add(spotLightHelper);
     let ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-    scene.add(spotLight);
-    scene.add(ambientLight);
+    webgl_scene.add(spotLight);
+    root.add(ambientLight);
 
-    // Create the floor and add in scene
-    let map_floor = new THREE.TextureLoader().load(floorUrl);
+    // Create the floor and add in webgl_scene
+    let map_floor = new THREE.TextureLoader(loadingManager).load(floorUrl);
     map_floor.wrapS = map_floor.wrapT = THREE.RepeatWrapping;
-    map_floor.repeat.set(128, 128);
-    let floor_geometry = new THREE.PlaneGeometry(2000, 2000, 100, 100);
+    map_floor.repeat.set(100, 100);
+    let floor_geometry = new THREE.PlaneGeometry(1200, 850, 100, 100);
     let floor = new THREE.Mesh(floor_geometry, new THREE.MeshPhongMaterial({
         color: 0xffffff,
         // flatShading: true,
@@ -143,14 +86,14 @@ function createScene(canvas) {
     floor.rotation.x = -Math.PI / 2;
     floor.castShadow = false;
     floor.receiveShadow = true;
-    floor.position.set(0, 0, -800);
-    scene.add(floor);
+    floor.position.set(420, 0, -350);
+    root.add(floor);
 
-    //Create the roof and add in scene
-    let map_roof = new THREE.TextureLoader().load(roofUrl);
+    //Create the roof and add in webgl_scene
+    let map_roof = new THREE.TextureLoader(loadingManager).load(roofUrl);
     map_roof.wrapS = map_roof.wrapT = THREE.RepeatWrapping;
     map_roof.repeat.set(25, 25);
-    let roofGeometry = new THREE.PlaneGeometry(2000, 2000, 100, 100);
+    let roofGeometry = new THREE.PlaneGeometry(1200, 850, 100, 100);
     let roof = new THREE.Mesh(roofGeometry, new THREE.MeshPhongMaterial({
         color: 0xffffff,
         map: map_roof,
@@ -159,35 +102,89 @@ function createScene(canvas) {
     roof.rotation.x = -Math.PI / 2;
     // roof.castShadow = false;
     // roof.receiveShadow = true;
-    roof.position.set(0, 340, -800);
-    scene.add(roof);
-
-    // Add the museum room
-    museumRoom(scene);
-
-    // Add the video of history
-    // addVideo(video.position, video.rotation, video.url, video.id);
-    // addVideo(video2.position, video2.rotation, video2.url, video2.id);
-
-    // Add the 3D text
-    loadText(text_1.message, text_1.position, text_1.rotation, text_1.propertiesFont);
-    loadText(text_2.message, text_2.position, text_2.rotation, text_2.propertiesFont);
+    roof.position.set(420, 340, -350);
+    root.add(roof);
 
     //Create the models
-    loadObjectsTanks();
+    loadObjectsTanks().then(element => {
+        for (const eachTank of element) {
+            // console.log(element);
+            root.add(eachTank);
+        }
+    });
+
+    // Add the museum room
+    loadWallMaterial(wallUrl);
+    for (const eachWall of walls) {
+        cloneWalls(eachWall.size, eachWall.position, eachWall.rotation, root);
+    }
+
+    // Add the video of history
+    // for (const eachVideo of videos) {
+    //     addVideo(eachVideo.position, eachVideo.rotation, eachVideo.url, eachVideo.id);
+    // }
+
+    // Add the 3D text
+    for (const eachText of text) {
+        loadText(eachText.message, eachText.position, eachText.rotation, eachText.propertiesFont, root);
+    }
+
+
+    // console.log(objects_tanks);
+    for (const tank of objects_tanks) {
+        // console.log(information);
+        createInformation(tank.information.texture, size_info, tank.information.position, tank.information.rotation_info, webgl_scene);
+    }
 
     initPointerLock();
+    webgl_scene.add(root);
+    if (!controls.isLocked) {
+        document.addEventListener('keydown', onKeyDown, false);
+        document.addEventListener('keyup', onKeyUp, false);
+    }
+    window.addEventListener('resize', onWindowResize, false);
 
-    document.addEventListener('keydown', onKeyDown, false);
-    document.addEventListener('keyup', onKeyUp, false);
 }
 
 /*-------------------------------------------------------------------------------------------------------------------*/
 
+//Loading manager
+function loadingM() {
+    let countLoad = 0;
+    loadingManager = new THREE.LoadingManager();
+
+    // loadingManager.onStart = function (url, itemsLoaded, itemsTotal) {
+    //     console.log('Started loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.');
+    // };
+
+    loadingManager.onLoad = function () {
+        countLoad += 1;
+        // console.log('Loading complete!');
+        if (countLoad >= 4) {
+            const loadingScreen = document.getElementById('loading-screen');
+            loadingScreen.classList.add('fade-out');
+
+            // optional: remove loader from DOM via event listener
+            loadingScreen.addEventListener('transitionend', onTransitionEnd);
+        }
+
+
+    };
+
+    // loadingManager.onProgress = function (url, itemsLoaded, itemsTotal) {
+    //     console.log('Loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.');
+    // };
+    //
+    // loadingManager.onError = function (url) {
+    //     console.log('There was an error loading ' + url);
+    // };
+}
+
 //Load objects
 async function loadObjectsTanks() {
-    let loaderFBX = promisifyLoader(new THREE.FBXLoader());
-    let loaderOBJ = promisifyLoader(new THREE.OBJLoader());
+    let loaderFBX = promisifyLoader(new THREE.FBXLoader(loadingManager));
+    let loaderOBJ = promisifyLoader(new THREE.OBJLoader(loadingManager));
+    let id_name = 0;
     try {
         let object = null;
         for (const tank of objects_tanks) {
@@ -201,22 +198,24 @@ async function loadObjectsTanks() {
             }
 
             let texture = tank.hasOwnProperty("map")
-                ? new THREE.TextureLoader().load(tank.map)
+                ? new THREE.TextureLoader(loadingManager).load(tank.map)
                 : null;
             let texture2 = tank.hasOwnProperty("map")
-                ? new THREE.TextureLoader().load(tank.map2)
+                ? new THREE.TextureLoader(loadingManager).load(tank.map2)
                 : null;
             let normalMap = tank.hasOwnProperty("normalMap")
-                ? new THREE.TextureLoader().load(tank.normalMap)
+                ? new THREE.TextureLoader(loadingManager).load(tank.normalMap)
                 : null;
             let specularMap = tank.hasOwnProperty("specularMap")
-                ? new THREE.TextureLoader().load(tank.specularMap)
+                ? new THREE.TextureLoader(loadingManager).load(tank.specularMap)
                 : null;
             object.traverse(function (child) {
                 if (child.isMesh) {
                     child.castShadow = true;
                     child.receiveShadow = true;
-                    console.log(child);
+                    child.material.shininess = 100;
+                    child.material.specular = {r: 0.8, g: 0.8, b: 0.8};
+                    child.material.color = {r: 1, g: 1, b: 1};
                     if (!(tank.obj.toLowerCase().endsWith("panzer-tank.fbx"))) {
                         if (tank.obj.toLowerCase().endsWith("mc1.obj")) {
                             switch (child.name) {
@@ -229,31 +228,41 @@ async function loadObjectsTanks() {
                                     child.material.map = texture2;
                                     break;
                             }
+                        } else if (tank.obj.toLowerCase().endsWith("btr80a.fbx")) {
+                            child.material.color = {r: 1, g: 1, b: 1};
+                            switch (child.name) {
+                                case "BTR_80_WA007":
+                                    child.material.map = texture2;
+                                    break;
+                                default:
+                                    child.material.map = texture;
+                                    break;
+                            }
                         } else {
                             child.material.normalMap = normalMap;
                             child.material.specularMap = specularMap;
                             child.material.map = texture;
                         }
                     }
-
-
-                    // child.material.color = {r:1, g: 1, b: 1};
-                    // child.material.envMap = null;
-                    // child.material.emissive = {r: 0.1, g: 0.1, b: 0.1};
                 }
             });
             object.scale.set(tank.scale, tank.scale, tank.scale);
             object.position.set(tank.position.x, tank.position.y, tank.position.z);
-            scene.add(object);
+            object.rotation.set(tank.rotation.x, tank.rotation.y, tank.rotation.z);
+            object.name = id_name;
+            id_name += 1;
+            tanksArr.push(object);
         }
+        return tanksArr;
     } catch (e) {
         console.log(e);
     }
+
 }
 
 //Load wall material
 function loadWallMaterial(texture) {
-    let loader = new THREE.TextureLoader();
+    let loader = new THREE.TextureLoader(loadingManager);
     let wall_map = loader.load(texture);
     wall_material = new THREE.MeshPhongMaterial({
         color: 0xffffff,
@@ -264,9 +273,19 @@ function loadWallMaterial(texture) {
     });
 }
 
-//Load and Add text in scene
-async function loadText(message, position, rotation, propertiesFont) {
-    let loader = promisifyLoader(new THREE.FontLoader());
+//Load information
+function loadInformation(texture) {
+    let loader = new THREE.TextureLoader(loadingManager);
+    let info_map = loader.load(texture);
+    info_material = new THREE.MeshPhongMaterial({
+        color: 0xffffff,
+        map: info_map,
+    });
+}
+
+//Load and Add text in webgl_scene
+async function loadText(message, position, rotation, propertiesFont, root) {
+    let loader = promisifyLoader(new THREE.FontLoader(loadingManager));
     try {
         let textObject = await loader.load('../fonts/Open_Sans_Bold.json');
         let fontGeometry = new THREE.TextGeometry(message, {
@@ -291,62 +310,23 @@ async function loadText(message, position, rotation, propertiesFont) {
         textMesh.position.set(position.x, position.y, position.z);
         // textMesh.rotation.set(0, 300, 0);
         textMesh.rotation.set(rotation.x, rotation.y, rotation.z);
-        scene.add(textMesh);
+        root.add(textMesh);
     } catch (e) {
         console.log(e);
     }
 }
 
 /*-------------------------------------------------------------------------------------------------------------------*/
-//Utils and functions to create objects in scene
 
-//Add walls
-function museumRoom(scene) {
-    loadWallMaterial(wallUrl);
-    //The wall of back
-    let sizeFirstRoom = {h: 370, w: 2000, d: 20};
-    let rotation = {x: 0, y: 0, z: 0};
-    let positionRoomBack = {x: 0, y: 180, z: 50};
-    cloneWalls(sizeFirstRoom, positionRoomBack, rotation, scene);
+//Utils and functions to create objects in webgl_scene
 
-    // The walls of the sides
-    let sizeFirstRoomLR = {h: 370, w: 360, d: 20};
-    let positionRoomLeft = {x: -150, y: 180, z: -140};
-    let rotationSides = {x: 0, y: 300 + 0.02, z: 0};
-    cloneWalls(sizeFirstRoomLR, positionRoomLeft, rotationSides, scene);
+function onTransitionEnd(event) {
 
-    let positionRoomRight = {x: 150, y: 180, z: -140};
-    cloneWalls(sizeFirstRoomLR, positionRoomRight, rotationSides, scene);
+    event.target.remove();
 
-    let sizeWallUp = {h: 250, w: 150, d: 20};
-    let positionWallUp = {x: -150, y: 240, z: -395};
-    let rotationWallUp = {x: 0, y: 300 + 0.02, z: 0};
-    cloneWalls(sizeWallUp, positionWallUp, rotationWallUp, scene);
-
-    let positionWallUp2 = {x: 150, y: 240, z: -395};
-    cloneWalls(sizeWallUp, positionWallUp2, rotationWallUp, scene);
-
-    let positionRoomRight2 = {x: 150, y: 180, z: -650};
-    cloneWalls(sizeFirstRoomLR, positionRoomRight2, rotationSides, scene);
-
-    let positionRoomLeft2 = {x: -150, y: 180, z: -650};
-    cloneWalls(sizeFirstRoomLR, positionRoomLeft2, rotationSides, scene);
-
-    //The wall of front
-    let positionRoomFront = {x: 0, y: 180, z: -750};
-    cloneWalls(sizeFirstRoom, positionRoomFront, rotation, scene);
-    // console.log(objects);
-
-    // The wall of left end
-    let sizeMuseumRL = {h: 370, w: 830, d: 20};
-    let positionMusemRight = {x: 1000, y: 180, z: -350};
-    cloneWalls(sizeMuseumRL, positionMusemRight, rotationSides, scene);
-
-    let positionMusemLeft = {x: -1000, y: 180, z: -350};
-    cloneWalls(sizeMuseumRL, positionMusemLeft, rotationSides, scene);
 }
 
-//Add videos in scene
+//Add videos in webgl_scene
 async function addVideo(position, rotation, videoUrl, id) {
     try {
         let videoElementsArray = [];
@@ -373,7 +353,7 @@ async function addVideo(position, rotation, videoUrl, id) {
         movieScreen.position.set(position.x, position.y, position.z);
         movieScreen.rotation.set(rotation.x, rotation.y, rotation.z);
         movieScreen.name = id;
-        scene.add(movieScreen);
+        webgl_scene.add(movieScreen);
         videoElementsArray.push(movieScreen);
         videoObj.push(videoElementsArray);
     } catch (e) {
@@ -382,7 +362,7 @@ async function addVideo(position, rotation, videoUrl, id) {
 }
 
 //Clone walls
-function cloneWalls(size, position, rotation, scene) {
+function cloneWalls(size, position, rotation, webgl_scene) {
     let wallGeometry = new THREE.BoxBufferGeometry(size.w, size.h, size.d);
     let wall = new THREE.Mesh(wallGeometry, wall_material);
     wall.position.set(position.x, position.y, position.z);
@@ -390,7 +370,24 @@ function cloneWalls(size, position, rotation, scene) {
     let collider = new THREE.Box3().setFromObject(wall);
     wall_colider.push(collider);
     objects.push(wall);
-    scene.add(wall);
+    webgl_scene.add(wall);
+}
+
+//Clone information
+function createInformation(texture, size, position, rotation, webgl_scene) {
+    loadInformation(texture);
+    let info_geometry = new THREE.BoxBufferGeometry(size.w, size.h, size.d);
+    let info_mesh = new THREE.Mesh(info_geometry, info_material);
+    info_mesh.position.set(position.x, position.y, position.z);
+    info_mesh.rotation.set(rotation.x, rotation.y, rotation.z);
+    webgl_scene.add(info_mesh);
+
+    let cylinder_geometry = new THREE.CylinderBufferGeometry(1, 1, 10, 30);
+    let material = new THREE.MeshBasicMaterial({color: 0x403f3f});
+    let cylinder_mesh = new THREE.Mesh(cylinder_geometry, material);
+    // console.log(info_mesh.position);
+    cylinder_mesh.position.set(info_mesh.position.x, info_mesh.position.y - 6, info_mesh.position.z);
+    webgl_scene.add(cylinder_mesh);
 }
 
 /*-------------------------------------------------------------------------------------------------------------------*/
@@ -415,8 +412,8 @@ function initPointerLock() {
     instructions.addEventListener('click', function () {
         controls.lock();
     }, false);
-
-    scene.add(controls.getObject());
+    controls.getObject().position.y = 10;
+    webgl_scene.add(controls.getObject());
 }
 
 function onKeyDown(event) {
@@ -516,10 +513,17 @@ function onWindowResize() {
 function run() {
     requestAnimationFrame(run);
 
-    if (controls.isLocked === true) {
+
+    if (controls.isLocked) {
         let time = performance.now();
         let delta = (time - prevTime) / 1000;
 
+        for (const rotationTank of tanksArr) {
+            if (rotationTank.name < 2) {
+                rotationTank.rotation.y += (delta / 3);
+            }
+        }
+        ;
         // if (controls.getObject().position.x < 400 && controls.getObject().position.x > videoObj[0][3].position.x) {
         //     console.log("Video 1");
         // }
@@ -537,8 +541,8 @@ function run() {
         // });
 
         //TODO Modify later
-        velocity.x -= velocity.x * 10.0 * delta;
-        velocity.z -= velocity.z * 10.0 * delta;
+        velocity.x -= velocity.x * 5.0 * delta;
+        velocity.z -= velocity.z * 5.0 * delta;
 
         direction.z = Number(moveForward) - Number(moveBackward);
         direction.x = Number(moveRight) - Number(moveLeft);
@@ -596,7 +600,7 @@ function run() {
         }
         prevTime = time;
     }
-    renderer.render(scene, camera);
+    renderer.render(webgl_scene, camera);
 }
 
 /*-------------------------------------------------------------------------------------------------------------------*/
