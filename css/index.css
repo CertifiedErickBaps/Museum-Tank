@@ -5,6 +5,13 @@ html, body {
     height: 100%;
 }
 
+.beggin-text {
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 #loading-screen {
     position: absolute;
     z-index: 2;

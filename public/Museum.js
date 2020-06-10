@@ -1,5 +1,8 @@
 //Variables for objects and scene
-let camera, webgl_scene, renderer, controls, stats;
+import {FilmPass} from "../js/postprocessing/FilmPass.js";
+import {SepiaShader} from "../js/postprocessing/SepiaShader.js";
+
+let camera, webgl_scene, renderer, controls;
 let objects = [];
 let tanksArr = [];
 let root;
@@ -24,8 +27,11 @@ let SHADOW_MAP_WIDTH = 2048,
     SHADOW_MAP_HEIGHT = 2048;
 
 let loadingManager;
+let composer;
 
 /*-------------------------------------------------------------------------------------------------------------------*/
+createScene(document.getElementById("webglcanvas"));
+run();
 
 //Create webgl_scene
 function createScene(canvas) {
@@ -58,7 +64,7 @@ function createScene(canvas) {
     // intensity - (optional) numeric value of the light's strength/intensity. Default is 1.
 
     //Create the light and shadows
-    let spotLight = new THREE.SpotLight(0xffffff, 0.4, 1120);//, Math.PI / 2);
+    let spotLight = new THREE.SpotLight(0x646464, 0.4, 1120);//, Math.PI / 2);
     spotLight.position.set(0, 1120, 0);
     spotLight.castShadow = true;
     spotLight.shadow.camera.near = 1;
@@ -120,9 +126,9 @@ function createScene(canvas) {
     }
 
     // Add the video of history
-    // for (const eachVideo of videos) {
-    //     addVideo(eachVideo.position, eachVideo.rotation, eachVideo.url, eachVideo.id);
-    // }
+    for (const eachVideo of videos) {
+        addVideo(eachVideo.position, eachVideo.rotation, eachVideo.url, eachVideo.id);
+    }
 
     // Add the 3D text
     for (const eachText of text) {
@@ -142,7 +148,27 @@ function createScene(canvas) {
         document.addEventListener('keydown', onKeyDown, false);
         document.addEventListener('keyup', onKeyUp, false);
     }
+
+    addEffects();
     window.addEventListener('resize', onWindowResize, false);
+
+}
+
+function addEffects() {
+    composer = new THREE.EffectComposer(renderer);
+    const renderPass = new THREE.RenderPass(webgl_scene, camera);
+    let effectFilmBW = new FilmPass(
+        0.38,   // noise intensity
+        0.1,  // scanline intensity
+        1000,    // scanline count
+        false,  // grayscale
+    );
+    let effectSepia = new THREE.ShaderPass(SepiaShader);
+    effectSepia.uniforms["amount"].value = 0.65;
+
+    composer.addPass(renderPass);
+    composer.addPass(effectFilmBW);
+    composer.addPass(effectSepia);
 
 }
 
@@ -153,31 +179,17 @@ function loadingM() {
     let countLoad = 0;
     loadingManager = new THREE.LoadingManager();
 
-    // loadingManager.onStart = function (url, itemsLoaded, itemsTotal) {
-    //     console.log('Started loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.');
-    // };
-
     loadingManager.onLoad = function () {
+        console.log('Loading complete!');
         countLoad += 1;
-        // console.log('Loading complete!');
-        if (countLoad >= 4) {
+        if (countLoad >= 5) {
             const loadingScreen = document.getElementById('loading-screen');
             loadingScreen.classList.add('fade-out');
 
             // optional: remove loader from DOM via event listener
             loadingScreen.addEventListener('transitionend', onTransitionEnd);
         }
-
-
     };
-
-    // loadingManager.onProgress = function (url, itemsLoaded, itemsTotal) {
-    //     console.log('Loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.');
-    // };
-    //
-    // loadingManager.onError = function (url) {
-    //     console.log('There was an error loading ' + url);
-    // };
 }
 
 //Load objects
@@ -216,34 +228,35 @@ async function loadObjectsTanks() {
                     child.material.shininess = 100;
                     child.material.specular = {r: 0.8, g: 0.8, b: 0.8};
                     child.material.color = {r: 1, g: 1, b: 1};
-                    if (!(tank.obj.toLowerCase().endsWith("panzer-tank.fbx"))) {
-                        if (tank.obj.toLowerCase().endsWith("mc1.obj")) {
-                            switch (child.name) {
-                                case "Body_UV.004":
-                                case "Tower_UV.001":
-                                case "Gun_UV.008":
-                                    child.material.map = texture;
-                                    break;
-                                default:
-                                    child.material.map = texture2;
-                                    break;
-                            }
-                        } else if (tank.obj.toLowerCase().endsWith("btr80a.fbx")) {
-                            child.material.color = {r: 1, g: 1, b: 1};
-                            switch (child.name) {
-                                case "BTR_80_WA007":
-                                    child.material.map = texture2;
-                                    break;
-                                default:
-                                    child.material.map = texture;
-                                    break;
-                            }
-                        } else {
-                            child.material.normalMap = normalMap;
-                            child.material.specularMap = specularMap;
-                            child.material.map = texture;
+                    if (tank.obj.toLowerCase().endsWith("mc1.obj")) {
+                        switch (child.name) {
+                            case "Body_UV.004":
+                            case "Tower_UV.001":
+                            case "Gun_UV.008":
+                                child.material.map = texture;
+                                break;
+                            default:
+                                child.material.map = texture2;
+                                break;
                         }
+                    } else if (tank.obj.toLowerCase().endsWith("btr80a.fbx")) {
+                        child.material.color = {r: 1, g: 1, b: 1};
+                        switch (child.name) {
+                            case "BTR_80_WA007":
+                                child.material.map = texture2;
+                                break;
+                            default:
+                                child.material.map = texture;
+                                break;
+                        }
+                    } else if (tank.obj.toLowerCase().endsWith("leopard.obj")) {
+                        child.material.map = texture;
+                    } else {
+                        child.material.normalMap = normalMap;
+                        child.material.specularMap = specularMap;
+                        child.material.map = texture;
                     }
+
                 }
             });
             object.scale.set(tank.scale, tank.scale, tank.scale);
@@ -533,16 +546,16 @@ function run() {
         //     //     element[0].pause();
         // }
 
-        // videoObj.forEach(element => {
-        //     if (element[0].readyState === element[0].HAVE_ENOUGH_DATA) {
-        //         element[1].drawImage(element[0], 0, 0);
-        //         if (element[2]) element[2].needsUpdate = true;
-        //     }
-        // });
+        videoObj.forEach(element => {
+            if (element[0].readyState === element[0].HAVE_ENOUGH_DATA) {
+                element[1].drawImage(element[0], 0, 0);
+                if (element[2]) element[2].needsUpdate = true;
+            }
+        });
 
         //TODO Modify later
-        velocity.x -= velocity.x * 5.0 * delta;
-        velocity.z -= velocity.z * 5.0 * delta;
+        velocity.x -= velocity.x * 10.0 * delta;
+        velocity.z -= velocity.z * 10.0 * delta;
 
         direction.z = Number(moveForward) - Number(moveBackward);
         direction.x = Number(moveRight) - Number(moveLeft);
@@ -600,7 +613,8 @@ function run() {
         }
         prevTime = time;
     }
-    renderer.render(webgl_scene, camera);
+    // renderer.render(webgl_scene, camera);
+    composer.render();
 }
 
 /*-------------------------------------------------------------------------------------------------------------------*/
