@@ -1,6 +1,6 @@
-#Proyecto Final de Graficas Computacionales
+# Proyecto Final de Graficas Computacionales
 
-###Vista general
+### Vista general
 Esta documentacion fue diseñada para explicar el trabajo realizado durante el semestre
 para el curso de **Graficas Computacionales**, creando un proyecto usando Three.js y otras 
 librerias externas.
@@ -44,7 +44,7 @@ por lo que los videos originales estan en el siguiente enlace: [https://drive.go
 * Box3 for Colliders
 
 
-###Autor
+### Autor
 
 * *A01379896* <em>Erick Bautista Pérez</em>
 
@@ -52,7 +52,8 @@ por lo que los videos originales estan en el siguiente enlace: [https://drive.go
 
 Professor Octavio Navarro Hinojosa
 
-##Demo
+## Demo
+
 ![](./img/demo.gif)
 
 ### Referencias
